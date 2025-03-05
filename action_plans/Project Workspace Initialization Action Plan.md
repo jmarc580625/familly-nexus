@@ -172,30 +172,14 @@
 
     - **Objective**: Get the database (PostgreSQL with pgvector) up and running in a Docker container.
 
-    1. **Customise the postgres image**: to add the pgvector extension.
-
-    - Create a `Dockerfile` in the root of your project (`d:\familly-nexus`) with the following contents:
-
-      ```
-      FROM postgres:16-alpine
-
-      RUN apt-get update && apt-get install -y --no-install-recommends \
-        postgresql-16-pgvector \
-        && rm -rf /var/lib/apt/lists/*
-      ```
-
-    2. **Docker Compose File**:
+    1. **Docker Compose File**:
 
     - Create a docker-compose.yml file in the root of your project (`d:\familly-nexus`).
 
       ```
-      version: '3.8'
-
       services:
         db:
-          build:
-            context: .
-            dockerfile: Dockerfile
+          image: pgvector/pgvector:pg17 # Specify PostgreSQL version 17
           container_name: family-nexus-db
           restart: always
           environment:
@@ -203,7 +187,7 @@
             - POSTGRES_PASSWORD=postgres
             - POSTGRES_DB=familynexus
           ports:
-            - "127.0.0.1:5432:5432" #bind to localhost only
+            - "127.0.0.1:5432:5432"
           volumes:
             - db-data:/var/lib/postgresql/data
           healthcheck:
@@ -217,13 +201,11 @@
         db-data:
       ```
 
-    3. \*\*Rebuild the image"
-
+    2. **Rebuild the image**:
        ```
        docker compose up -d --build
        ```
-
-    4. **Start the Database Container**:
+    3. \*Start the Database Container\*\*:
        ```
        cd d:\familly-nexus
        docker compose up -d
@@ -236,10 +218,146 @@
 4.  **Create Initial File Structure:**
 
     - Set up a basic file and folder structure within the project directory.
-    - (This will be clarified in Q&A)
 
-5.  **Test Environment:**
-    - Run a simple "Hello, World!" program to ensure everything is working.
+    ```
+    d:\familly-nexus/
+    ├── frontend/          # React application
+    │   ├── public/
+    │   ├── src/
+    │   │   ├── components/
+    │   │   ├── pages/
+    │   │   ├── services/  # API calls
+    │   │   ├── ...
+    │   ├── ...
+    ├── backend/          # Flask application
+    │   ├── app.py        # Main Flask application file
+    │   ├── models.py     # Database models
+    │   ├── routes.py     # API routes
+    │   ├── schemas.py    # Data validation schemas (optional, but recommended)
+    │   ├── services/     # Business logic
+    │   ├── utils/        # Utility functions
+    │   ├── tests/        # Unit tests
+    │   ├── ...
+    ├── docker-compose.yml
+    ├── Dockerfile
+    ├── .env              # Environment variables
+    ├── README.md
+    └── ...
+    ```
+
+5.  **Test the Environment:** - Run a simple "Hello, World!" program to ensure everything is working.
+
+    - **Simple frontend**:
+
+      - Create a flask `.backend/app.py` (python) which connects to the database and respond back with database details
+
+        ```
+        import os
+        from flask import Flask
+        import psycopg2
+        from flask_cors import CORS
+
+              app = Flask(__name__)
+              CORS(app) # Enable CORS for all origins (for development only!)
+
+              DATABASE_URL = os.environ.get('DATABASE_URL')
+
+              @app.route("/")
+              def hello():
+                  try:
+                      conn = psycopg2.connect(DATABASE_URL)
+                      cur = conn.cursor()
+                      cur.execute("SELECT version();")
+                      db_version = cur.fetchone()[0]
+                      conn.close()
+                      return f"Hello from Flask! Database version: {db_version}"
+                  except Exception as e:
+                      return f"Error connecting to database: {e}"
+
+              if __name__ == "__main__":
+                  port = int(os.environ.get("PORT", 5000))  # Default to 5000 if PORT is not set
+                  app.run(debug=True, host='0.0.0.0', port=port)
+        ```
+
+      - Create a `.backend/requirements.txt` which list the python packages needed by the app
+
+        ```
+        Flask
+        flask_cors
+        psycopg2-binary
+        python-dotenv # For loading environment variables from a .env file
+        gunicorn # For production-ready WSGI HTTP server
+        ```
+
+      - Create a `.backend/Dockerfile` to build the image running the flask app and connect to the db
+
+        ```
+        FROM python:3.9-slim-buster
+
+        WORKDIR /app
+
+        COPY requirements.txt .
+        RUN pip install --no-cache-dir -r requirements.txt
+
+        COPY . .
+
+        ENV DATABASE_URL=postgresql://postgres:postgres@db:5432/familynexus
+        ENV FLASK_ENV=development
+
+        CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:app"]
+        ```
+
+      - Update the `docker-compose.yml`
+
+        ```
+        services:
+          db:
+            # ... (same as before)
+
+          api: # Your Flask application
+            build:
+              context: ./backend
+              dockerfile: Dockerfile
+            ports:
+              - "5000:5000" # Map port 5000 for local access (optional, remove for production)
+            depends_on:
+              - db
+            environment:
+              - DATABASE_URL=postgresql://postgres:postgres@db:5432/familynexus
+              - FLASK_ENV=development # Or "production" in production
+
+        volumes:
+          db-data:
+        ```
+
+    - **Simple backend**:
+
+      - Create a React `.frontend/src/App.js`
+
+        ```
+        import React from "react";
+
+        function App() {
+          const [message, setMessage] = React.useState("");
+
+          React.useEffect(() => {
+            fetch("http://localhost:5000/") // Or http://api:5000/ if you aren't mapping to localhost
+              .then((response) => response.text())
+              .then((data) => setMessage(data));
+          }, []);
+
+          return (
+            <div>
+              <h1>FamilyNexus</h1>
+              <p>Message from backend: {message}</p>
+            </div>
+          );
+        }
+
+        export default App;
+        ```
+
+      - Create a `./frontend/Dokerfile` to build the image running the React app and connect to the api
 
 ## Phase 3: Initial Code Structure (Basic)
 

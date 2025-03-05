@@ -18,5 +18,26 @@ services:
       retries: 5
       start_period: 10s
 
+  api: # Your Flask application
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000" # Map port 5000 for local access (optional, remove for production)
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/familynexus
+      - FLASK_ENV=development # Or "production" in production
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80" # Map container port 80 to host port 3000
+    depends_on:
+      - api # Frontend depends on the API being available
+
 volumes:
   db-data:
