@@ -3,3 +3,4 @@ flask_cors
 psycopg2-binary
 python-dotenv # For loading environment variables from a .env file
 gunicorn # For production-ready WSGI HTTP server
+SQLAlchemy
