@@ -359,28 +359,173 @@
 
       - Create a `./frontend/Dokerfile` to build the image running the React app and connect to the api
 
+        ```
+        # Use a minimal Node.js image
+        FROM node:18-alpine as builder
+
+        # Set working directory
+        WORKDIR /app
+
+        # Copy package.json and package-lock.json
+        COPY package*.json ./
+
+        # Install dependencies
+        RUN npm install
+
+        # Copy the rest of the application code
+        COPY . .
+
+        # Build the React app
+        RUN npm run build
+
+        # Use a smaller production image
+        FROM nginx:alpine
+
+        # Copy the built React app into Nginx's static directory
+        COPY --from=builder /app/build /usr/share/nginx/html
+
+        # Expose the port
+        EXPOSE 80
+        ```
+
+      - Update the `docker-compose.yml`
+
+        ```
+        services:
+          db:
+            (same as before)
+
+          api: # Your Flask application
+            (same as before)
+
+          frontend:
+            build:
+              context: ./frontend
+              dockerfile: Dockerfile
+            ports:
+              - "3000:80" # Map container port 80 to host port 3000
+            depends_on:
+              - api # Frontend depends on the API being available
+
+        volumes:
+          db-data:
+        ```
+
 ## Phase 3: Initial Code Structure (Basic)
 
 **Objective:** Set up the minimal viable code structure to start development.
 
-**Actions:**
-
 1.  **Create Core Modules:**
 
-    - Set up the basic modules or components of your application.
-    - (This will be clarified in Q&A)
+Establishing the fundamental building blocks.
+Structuring the codebase to promote modularity, maintainability, and scalability.
 
-2.  **Write Initial Tests:**
+- **Backend `(./backend directory)`**
 
-    - Create basic unit tests for the core modules.
-    - (This will be clarified in Q&A)
+  - **Backend Models (./backend/models.py)**:
 
-3.  **Document Setup:**
+    Define database models using SQLAlchemy. These models represent the data structures (tables) in PostgreSQL database. For the MVP, models for:
 
-    - Add a description to your README.md file.
-    - Consider adding a more in depth documentation like a "doc" folder.
-    - Consider adding a wiki to your repository
+    - Person: id, name, birthdate, description, etc.
+    - Photo: id, filename, upload_date, description, location (latitude/longitude), date_taken, author, etc.
 
-4.  **Review and Refine:**
-    - Review the initial setup and make any necessary adjustments.
-    - Seek feedback from other developers (if applicable).
+  - **Backend Routes (./backend/routes.py)**:
+
+    Define API routes using Flask. These routes will handle HTTP requests (GET, POST, PUT, DELETE) for interacting with your data. For the MVP, routes for:
+
+    - Uploading photos (POST)
+    - Getting a list of photos (GET)
+    - Getting details for a specific photo (GET)
+    - Adding/editing person information (POST/PUT)
+    - Getting a list of people (GET)
+    - Getting details for a specific person (GET)
+
+  - **Backend Services (./backend/services.py)**:
+
+    Implement business logic related to photo and person management. This layer separates data handling from the API routes. Functions might include:
+
+    - upload_photo(photo_file, description, person_ids)
+    - get_photos(search_criteria)
+    - add_person(person_data)
+    - update_person(person_id, person_data)
+
+  - **Utilities (./backend/util.py)**:
+
+    Include utility functions. This could contain functions related to image processing (e.g., extracting EXIF data), data validation, or other helper functions.
+
+  - **./backend/app.py**:
+
+    This file initializes the Flask app and registers the routes and any middleware (e.g. CORS handling).
+
+2. **Frontend (./frontend directory)**
+
+   - **Components (./frontend/components directory)**:
+
+     Create reusable React components. Examples:
+
+     - PhotoCard: Displays a single photo with its description and associated people.
+     - PersonDetails: Shows details of a person (name, birthdate, deathdate, etc.)
+     - PhotoUpload: A form for uploading photos.
+     - FamilyTree: A component to render a simple family tree. (Consider using a library to visualize the family tree if you are not familiar with tree-like visualisations)
+     - SearchBar: Allows users to search photos.
+
+   - **Pages (./frontend/pages directory)**:
+
+     Define different pages (routes) in your React application. Examples:
+
+     - HomePage: The main landing page.
+     - GalleryPage: Shows the photo gallery.
+     - PersonPage: Shows details of a specific person.
+     - AddPersonPage: A form to add a new person.
+
+   - **Services (./frontend/services directory)**:
+
+     Implement functions to interact with the backend API (fetch data, send data).
+
+3. **Write Initial Tests:**
+
+4. **Write Initial Tests:**
+
+   - **Backend Tests:**
+
+     - Create unit tests for the backend services and routes.
+     - Use `pytest` for writing and running tests.
+     - Example test file structure:
+       ```
+       d:\familly-nexus\backend\tests\
+       ├── test_models.py
+       ├── test_routes.py
+       ├── test_services.py
+       └── ...
+       ```
+
+   - **Frontend Tests:**
+
+     - Create unit tests for the frontend components and services.
+     - Use `@testing-library/react` for writing and running tests.
+     - Example test file structure:
+       ```
+       d:\familly-nexus\tests\frontend\
+       ├── test_components\
+       │   ├── PhotoCard.test.js
+       │   ├── PersonDetails.test.js
+       │   └── ...
+       ├── test_services\
+       │   ├── api.test.js
+       │   └── ...
+       └── ...
+       ```
+
+   - **Run Tests:**
+     - Ensure all tests pass before proceeding to the next phase.
+     - Use CI/CD pipeline to automate test execution on each commit.
+
+5. **Document Setup:**
+
+   - Add a description to your README.md file.
+   - Consider adding a more in depth documentation like a "doc" folder.
+   - Consider adding a wiki to your repository
+
+6. **Review and Refine:**
+   - Review the initial setup and make any necessary adjustments.
+   - Seek feedback from other developers (if applicable).

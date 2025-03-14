@@ -1,3 +1,21 @@
-- We are running the action plan described in @Project Workspace Initialization Action Plan.md.
-- We progress one step at a time
-- Curent step is:
+- running the action plan described in @Project Workspace Initialization Action Plan.md.
+- progress one step and one item at a time
+- Current progress is:
+  - Phase 3 Initial Code Structure
+    - Step 1 Create Core Modules
+      - Item Backend Models (done)
+      - Item Backend Routes (done)
+      - Item Backend Services (done)
+      - Item Utilities (done)
+      - Item Frontend Components (done)
+        - Sub-item Header Component (done)
+        - Sub-item Footer Component (done)
+        - Sub-item Dashboard Component (done)
+        - Sub-item Login Component (done)
+        - Sub-item Registration Component (done)
+        - Sub-item Profile Component (done)
+      - Item Frontend Services (done)
+      - Item Frontend Routes (done)
+    - Step 2 Write Initial Tests
+      - Item Backend Tests (not started)
+      - Item Frontend Tests (not started)

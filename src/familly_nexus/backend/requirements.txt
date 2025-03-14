@@ -1,0 +1,8 @@
+Flask
+flask_sqlalchemy
+flask_cors
+psycopg2-binary
+python-dotenv
+gunicorn
+requests
+Pillow  # For image processing (extracting EXIF data)
