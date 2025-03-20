@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: family-nexus-db-prod
+    env_file: ../config/production.env
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio
+    env_file: ../config/production.env
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: ../docker/dockerfiles/backend.Dockerfile
+      args:
+        - ENV=production
+    env_file: ../config/production.env
+    depends_on:
+      - db
+      - minio
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: ../docker/dockerfiles/frontend.Dockerfile
+      args:
+        - ENV=production
+    env_file: ../config/production.env
+    depends_on:
+      - api
+
+volumes:
+  db-data:
+  minio_data:
