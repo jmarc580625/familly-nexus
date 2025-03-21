@@ -199,6 +199,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
     <Box>
       <Paper
         {...getRootProps()}
+        data-testid="dropzone"
         sx={{
           p: 3,
           mb: 3,
@@ -208,8 +209,9 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
           borderColor: isDragActive ? 'primary.main' : 'divider',
           cursor: 'pointer',
         }}
+        aria-label="Drop zone for uploading photos"
       >
-        <input {...getInputProps()} />
+        <input {...getInputProps()} data-testid="file-input" />
         <CloudUpload sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
         <Typography variant="h6" gutterBottom>
           {isDragActive
@@ -250,6 +252,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
                           onChange={(e) =>
                             handleMetadataChange(file.id, 'title', e.target.value)
                           }
+                          aria-label="Title"
                         />
                         <TextField
                           fullWidth
@@ -264,6 +267,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
                               e.target.value
                             )
                           }
+                          aria-label="Description"
                         />
                         <Autocomplete
                           multiple
@@ -283,7 +287,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
                             ))
                           }
                           renderInput={(params) => (
-                            <TextField {...params} label="Tags" />
+                            <TextField {...params} label="Tags" aria-label="Tags" />
                           )}
                         />
                         <Autocomplete
@@ -301,7 +305,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
                             )
                           }
                           renderInput={(params) => (
-                            <TextField {...params} label="People" />
+                            <TextField {...params} label="People" aria-label="People" />
                           )}
                         />
                         <Button
@@ -309,6 +313,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
                           onClick={() => openLocationPicker(file.id)}
                           variant="outlined"
                           fullWidth
+                          aria-label="Add location"
                         >
                           {file.metadata.location
                             ? `Location: ${file.metadata.location.name}`
@@ -341,12 +346,14 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
                       onClick={() =>
                         setEditingFile(editingFile === file.id ? null : file.id)
                       }
+                      aria-label="Edit photo"
                     >
                       <Edit />
                     </IconButton>
                     <IconButton
                       size="small"
                       onClick={() => handleRemoveFile(file.id)}
+                      aria-label="Delete photo"
                     >
                       <Delete />
                     </IconButton>
@@ -369,6 +376,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
               onClick={handleUpload}
               disabled={uploading}
               fullWidth
+              aria-label="Upload photos"
             >
               Upload {files.length} Photo{files.length !== 1 && 's'}
             </Button>

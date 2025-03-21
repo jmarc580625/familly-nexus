@@ -56,7 +56,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   initialLocation,
 }) => {
   const [location, setLocation] = useState<Location>({
-    name: '',
+    name: initialLocation?.name || '',
     latitude: initialLocation?.latitude || 51.505,
     longitude: initialLocation?.longitude || -0.09,
   });
@@ -73,10 +73,12 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
       setLoading(true);
       try {
         const newLocation = await reverseGeocode(lat, lng);
-        setLocation((prev) => ({
-          ...prev,
-          name: newLocation.name,
-        }));
+        if (newLocation) {
+          setLocation((prev) => ({
+            ...prev,
+            name: newLocation.name || prev.name,
+          }));
+        }
       } finally {
         setLoading(false);
       }
@@ -85,11 +87,12 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   );
 
   const handleLocationClick = async (latlng: LatLng) => {
-    setLocation((prev) => ({
-      ...prev,
+    const newLocation = {
+      name: location.name,
       latitude: latlng.lat,
       longitude: latlng.lng,
-    }));
+    };
+    setLocation(newLocation);
     updateLocationName(latlng.lat, latlng.lng);
   };
 
@@ -97,14 +100,22 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     field: 'latitude' | 'longitude',
     value: number
   ) => {
-    setLocation((prev) => ({
-      ...prev,
+    const newLocation = {
+      ...location,
       [field]: value,
-    }));
+    };
+    setLocation(newLocation);
     updateLocationName(
       field === 'latitude' ? value : location.latitude,
       field === 'longitude' ? value : location.longitude
     );
+  };
+
+  const handleNameChange = (name: string) => {
+    setLocation((prev) => ({
+      ...prev,
+      name,
+    }));
   };
 
   const handleSave = () => {
@@ -138,9 +149,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             fullWidth
             label="Location Name"
             value={location.name}
-            onChange={(e) =>
-              setLocation((prev) => ({ ...prev, name: e.target.value }))
-            }
+            onChange={(e) => handleNameChange(e.target.value)}
             placeholder="e.g., Central Park, New York"
             sx={{ mb: 2 }}
             disabled={loading}

@@ -118,7 +118,11 @@ export const Photos: React.FC = () => {
             ),
             endAdornment: searchQuery && (
               <InputAdornment position="end">
-                <IconButton size="small" onClick={handleClearSearch}>
+                <IconButton
+                  size="small"
+                  onClick={handleClearSearch}
+                  data-testid="clear-search"
+                >
                   <Clear />
                 </IconButton>
               </InputAdornment>

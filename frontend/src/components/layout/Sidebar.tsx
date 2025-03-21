@@ -57,6 +57,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, width, user }) => {
           boxSizing: 'border-box',
         },
       }}
+      role="navigation"
+      aria-label="Main navigation"
     >
       <Toolbar />
       <List>

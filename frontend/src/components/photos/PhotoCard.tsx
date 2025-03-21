@@ -43,6 +43,8 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
         cursor: 'pointer',
       }}
       onClick={() => onPhotoClick(photo)}
+      role="article"
+      aria-label={photo.title}
     >
       <CardMedia
         component="img"
@@ -80,6 +82,7 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
                 e.stopPropagation();
                 // Add tag click handler
               }}
+              aria-label={`Tag: ${tag}`}
             />
           ))}
           {photo.tags.length > 3 && (
@@ -87,6 +90,7 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
               label={`+${photo.tags.length - 3}`}
               size="small"
               variant="outlined"
+              aria-label={`${photo.tags.length - 3} more tags`}
             />
           )}
         </Box>
@@ -102,14 +106,14 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
           </Box>
           {photo.people.length > 0 && (
             <Tooltip title={`${photo.people.length} people tagged`}>
-              <IconButton size="small">
+              <IconButton size="small" aria-label={`${photo.people.length} people tagged in ${photo.title}`}>
                 <PeopleAlt fontSize="small" />
               </IconButton>
             </Tooltip>
           )}
           {photo.location && (
             <Tooltip title={photo.location.name || 'View location'}>
-              <IconButton size="small">
+              <IconButton size="small" aria-label={`View location of ${photo.title}`}>
                 <LocationOn fontSize="small" />
               </IconButton>
             </Tooltip>
@@ -117,6 +121,7 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
           {onLikeClick && (
             <IconButton
               size="small"
+              aria-label={`Like ${photo.title}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onLikeClick(photo);
@@ -128,6 +133,7 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
           {onShareClick && (
             <IconButton
               size="small"
+              aria-label={`Share ${photo.title}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onShareClick(photo);
@@ -136,7 +142,7 @@ export const PhotoCard: React.FC<PhotoCardProps> = ({
               <Share fontSize="small" />
             </IconButton>
           )}
-          <IconButton size="small">
+          <IconButton size="small" aria-label={`View info for ${photo.title}`}>
             <Info fontSize="small" />
           </IconButton>
         </Box>
