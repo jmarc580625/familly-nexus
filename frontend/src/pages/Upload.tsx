@@ -1,18 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Box, Typography, Paper, Alert } from '@mui/material';
 import { PhotoUpload } from '../components/photos/PhotoUpload';
 import { Photo, Person } from '../types';
+import { API_BASE_URL } from '../config';
 
-export const Upload: React.FC = () => {
-  const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
-  const [suggestedPeople, setSuggestedPeople] = useState<Person[]>([]);
-  const [error, setError] = useState<string | null>(null);
+const Upload = (): JSX.Element => {
+  const [suggestedTags, setSuggestedTags] = React.useState<string[]>([]);
+  const [suggestedPeople, setSuggestedPeople] = React.useState<Person[]>([]);
+  const [error, setError] = React.useState<string | null>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const fetchSuggestions = async () => {
       try {
         // Fetch tags
-        const tagsResponse = await fetch('/api/photos/tags');
+        const tagsResponse = await fetch(`${API_BASE_URL}/api/photos/tags`);
         if (!tagsResponse.ok) {
           throw new Error('Failed to fetch tags');
         }
@@ -20,7 +21,7 @@ export const Upload: React.FC = () => {
         setSuggestedTags(tagsResult.data);
 
         // Fetch people
-        const peopleResponse = await fetch('/api/persons');
+        const peopleResponse = await fetch(`${API_BASE_URL}/api/persons`);
         if (!peopleResponse.ok) {
           throw new Error('Failed to fetch people');
         }
@@ -65,3 +66,5 @@ export const Upload: React.FC = () => {
     </Box>
   );
 };
+
+export default Upload;

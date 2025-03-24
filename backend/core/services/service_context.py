@@ -1,13 +1,11 @@
 import os
 from typing import Optional
-from dotenv import load_dotenv
 from flask import Flask
 from core.models.db import db
 
 class ServiceContext:
     _instance: Optional['ServiceContext'] = None
     _initialized: bool = False
-    DEFAULT_DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/familly-nexus-database'
 
     def __new__(cls) -> 'ServiceContext':
         if cls._instance is None:
@@ -23,11 +21,18 @@ class ServiceContext:
     def db(self):
         return self._db
     
-    def initialize(self, app : Flask, database_url : str = None) -> None:
+    def initialize(self, app: Flask, database_url: str) -> None:
+        """Initialize the service context with database configuration.
+        
+        Args:
+            app: Flask application instance
+            database_url: Full database URL for SQLAlchemy. This should be provided
+                        by the application setup code, not hardcoded here.
+        """
         if not self.__class__._initialized:
-            load_dotenv()
+            if not database_url:
+                raise ValueError("database_url is required for ServiceContext initialization")
 
-            database_url = database_url or os.getenv('DATABASE_URL', ServiceContext.DEFAULT_DATABASE_URL)
             app.config['SQLALCHEMY_DATABASE_URI'] = database_url
             app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 

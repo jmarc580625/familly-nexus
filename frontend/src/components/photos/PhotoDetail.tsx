@@ -1,42 +1,61 @@
 import React from 'react';
 import {
   Dialog,
-  DialogContent,
   DialogTitle,
+  DialogContent,
   IconButton,
   Typography,
   Box,
-  Chip,
-  Grid,
-  Avatar,
   List,
   ListItem,
-  ListItemAvatar,
   ListItemText,
+  ListItemAvatar,
+  Avatar,
+  Chip,
   Divider,
+  Grid,
+  Stack,
 } from '@mui/material';
 import {
-  Close,
-  CalendarToday,
+  Close as CloseIcon,
   LocationOn,
-  Label,
+  Tag as TagIcon,
+  Person as PersonIcon,
+  CalendarToday,
+  LocalOffer,
   PeopleAlt,
 } from '@mui/icons-material';
 import { Photo, Person } from '../../types';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface PhotoDetailProps {
   photo: Photo;
+  people: Person[];
   open: boolean;
   onClose: () => void;
   onPersonClick?: (person: Person) => void;
+  onTagClick?: (tag: string) => void;
 }
+
+const formatDate = (dateString: string | undefined): string => {
+  if (!dateString) return 'Date inconnue';
+  try {
+    const date = parse(dateString, "yyyy-MM-dd'T'HH:mm:ssX", new Date());
+    return format(date, 'PPP', { locale: fr });
+  } catch (error) {
+    console.error('Error parsing date:', error);
+    return 'Date invalide';
+  }
+};
 
 export const PhotoDetail: React.FC<PhotoDetailProps> = ({
   photo,
+  people,
   open,
   onClose,
   onPersonClick,
+  onTagClick,
 }) => {
   return (
     <Dialog
@@ -50,7 +69,7 @@ export const PhotoDetail: React.FC<PhotoDetailProps> = ({
         <Box display="flex" alignItems="center" justifyContent="space-between">
           <Typography variant="h6">{photo.title}</Typography>
           <IconButton onClick={onClose} size="small">
-            <Close />
+            <CloseIcon />
           </IconButton>
         </Box>
       </DialogTitle>
@@ -94,74 +113,81 @@ export const PhotoDetail: React.FC<PhotoDetailProps> = ({
                 sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
               >
                 <CalendarToday fontSize="small" />
-                Taken on {format(new Date(photo.takenAt), 'PPP')}
+                {photo.date_taken && formatDate(photo.date_taken)}
               </Typography>
-              {photo.location && (
+              {photo.location_name && (
                 <Typography
                   variant="subtitle2"
                   color="text.secondary"
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
                 >
                   <LocationOn fontSize="small" />
-                  {photo.location.name || 'View on map'}
+                  {photo.location_name}
                 </Typography>
               )}
             </Box>
 
-            {photo.tags.length > 0 && (
-              <Box mb={3}>
-                <Typography
-                  variant="subtitle2"
-                  gutterBottom
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                >
-                  <Label fontSize="small" />
-                  Tags
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                  {photo.tags.map((tag) => (
-                    <Chip key={tag} label={tag} size="small" />
-                  ))}
-                </Box>
-              </Box>
-            )}
-
-            {photo.people.length > 0 && (
+            {photo.tags && photo.tags.length > 0 && (
               <Box>
                 <Typography
                   variant="subtitle2"
+                  color="text.secondary"
+                  gutterBottom
+                  sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                >
+                  <LocalOffer fontSize="small" />
+                  Tags
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap">
+                  {photo.tags.map((tag) => (
+                    <Chip
+                      key={tag}
+                      label={tag}
+                      size="small"
+                      onClick={() => onTagClick?.(tag)}
+                      sx={{ mb: 1 }}
+                    />
+                  ))}
+                </Stack>
+              </Box>
+            )}
+
+            {photo.people && photo.people.length > 0 && (
+              <Box>
+                <Typography
+                  variant="subtitle2"
+                  color="text.secondary"
                   gutterBottom
                   sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                 >
                   <PeopleAlt fontSize="small" />
-                  People in this photo
+                  People
                 </Typography>
-                <List>
-                  {photo.people.map((person) => (
-                    <React.Fragment key={person.id}>
-                      <ListItem
-                        button
-                        onClick={() => onPersonClick?.(person)}
-                      >
-                        <ListItemAvatar>
-                          <Avatar src={person.avatarUrl} alt={person.name}>
-                            {person.name[0]}
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={person.name}
-                          secondary={
-                            person.birthDate &&
-                            `Born ${format(
-                              new Date(person.birthDate),
-                              'PP'
-                            )}`
-                          }
-                        />
-                      </ListItem>
-                      <Divider variant="inset" component="li" />
-                    </React.Fragment>
-                  ))}
+                <List disablePadding>
+                  {photo.people.map((personId) => {
+                    // Find the person in the people prop
+                    const person = people?.find(p => p.id === personId);
+                    if (!person) return null;
+                    return (
+                      <React.Fragment key={person.id}>
+                        <ListItem
+                          onClick={() => onPersonClick?.(person)}
+                          sx={{
+                            cursor: 'pointer',
+                            '&:hover': {
+                              bgcolor: 'action.hover',
+                            },
+                          }}
+                        >
+                          <ListItemText primary={person.name} />
+                        </ListItem>
+                      </React.Fragment>
+                    );
+                  })}
                 </List>
               </Box>
             )}

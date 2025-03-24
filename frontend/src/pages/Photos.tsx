@@ -1,176 +1,160 @@
-import React, { useState } from 'react';
-import {
-  Box,
-  Typography,
-  TextField,
-  InputAdornment,
-  IconButton,
-  Toolbar,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
-} from '@mui/material';
-import { Search, FilterList, Clear } from '@mui/icons-material';
+import React, { useState, useEffect } from 'react';
+import { Grid, Typography, Box, CircularProgress, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { PhotoGrid } from '../components/photos/PhotoGrid';
+import { API_BASE_URL } from '../config';
+import { Photo, Person } from '../types';
+import { format, parse } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { QuickSearch } from '../components/search/QuickSearch';
 import { PhotoDetail } from '../components/photos/PhotoDetail';
-import { Photo } from '../types';
 
-// TODO: Replace with actual API call
-const MOCK_PHOTOS: Photo[] = [
-  {
-    id: '1',
-    url: 'https://picsum.photos/800/600',
-    title: 'Family Reunion 2024',
-    description: 'Annual family gathering at Grandma\'s house',
-    takenAt: '2024-07-04T15:30:00Z',
-    uploadedAt: '2024-07-05T10:00:00Z',
-    location: {
-      latitude: 40.7128,
-      longitude: -74.0060,
-      name: 'New York, NY'
-    },
-    tags: ['family', 'reunion', 'summer'],
-    people: [
-      {
-        id: '1',
-        name: 'John Smith',
-        birthDate: '1950-03-15',
-        relationships: [],
-        photos: []
-      },
-      {
-        id: '2',
-        name: 'Jane Smith',
-        birthDate: '1952-06-22',
-        relationships: [],
-        photos: []
+const Photos: React.FC = () => {
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(() => {
+    // Check if we have a previously selected photo
+    const savedPhoto = localStorage.getItem('selectedPhoto');
+    return savedPhoto ? JSON.parse(savedPhoto) : null;
+  });
+  const [sortBy, setSortBy] = useState<'date_taken' | 'upload_date' | 'title' | 'location' | 'author' | 'tags' | 'people'>('date_taken');
+
+  useEffect(() => {
+    const fetchPhotos = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/photos`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch photos');
+        }
+        const data = await response.json();
+        setPhotos(data.data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
       }
-    ]
-  },
-  // Add more mock photos as needed
-];
+    };
 
-export const Photos: React.FC = () => {
-  const [photos, setPhotos] = useState<Photo[]>(MOCK_PHOTOS);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('date');
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | undefined>();
-
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(event.target.value);
-    // TODO: Implement search functionality
-  };
-
-  const handleSortChange = (event: SelectChangeEvent) => {
-    setSortBy(event.target.value);
-    // TODO: Implement sorting functionality
-  };
-
-  const handleClearSearch = () => {
-    setSearchQuery('');
-    // TODO: Reset search results
-  };
+    fetchPhotos();
+  }, []);
 
   const handlePhotoClick = (photo: Photo) => {
     setSelectedPhoto(photo);
+    localStorage.setItem('selectedPhoto', JSON.stringify(photo));
   };
 
   const handleCloseDetail = () => {
     setSelectedPhoto(null);
+    localStorage.removeItem('selectedPhoto');
   };
 
-  const handleShareClick = (photo: Photo) => {
-    // TODO: Implement share functionality
-    console.log('Share photo:', photo);
+  const formatDate = (dateString: string | undefined): string => {
+    if (!dateString) return 'Date inconnue';
+    try {
+      const date = parse(dateString, "yyyy-MM-dd'T'HH:mm:ssX", new Date());
+      return format(date, 'PPP', { locale: fr });
+    } catch (error) {
+      console.error('Error parsing date:', error);
+      return 'Date invalide';
+    }
   };
 
-  const handleLikeClick = (photo: Photo) => {
-    // TODO: Implement like functionality
-    console.log('Like photo:', photo);
-  };
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Typography color="error" align="center">
+        {error}
+      </Typography>
+    );
+  }
+
+  const sortedPhotos = [...photos].sort((a, b) => {
+    switch (sortBy) {
+      case 'title':
+        return (a.title || '').localeCompare(b.title || '');
+      case 'location':
+        return (a.location_name || '').localeCompare(b.location_name || '');
+      case 'author':
+        return (a.author || '').localeCompare(b.author || '');
+      case 'tags':
+        return (b.tags?.length || 0) - (a.tags?.length || 0);
+      case 'people':
+        return (b.people?.length || 0) - (a.people?.length || 0);
+      case 'upload_date':
+        if (!a.upload_date && !b.upload_date) return 0;
+        if (!a.upload_date) return 1;
+        if (!b.upload_date) return -1;
+        try {
+          const dateA = parse(a.upload_date, "yyyy-MM-dd'T'HH:mm:ssX", new Date());
+          const dateB = parse(b.upload_date, "yyyy-MM-dd'T'HH:mm:ssX", new Date());
+          return dateB.getTime() - dateA.getTime();
+        } catch (error) {
+          console.error('Error parsing date:', error);
+          return 0;
+        }
+      case 'date_taken':
+      default:
+        if (!a.date_taken && !b.date_taken) return 0;
+        if (!a.date_taken) return 1;
+        if (!b.date_taken) return -1;
+        try {
+          const dateA = parse(a.date_taken, "yyyy-MM-dd'T'HH:mm:ssX", new Date());
+          const dateB = parse(b.date_taken, "yyyy-MM-dd'T'HH:mm:ssX", new Date());
+          return dateB.getTime() - dateA.getTime();
+        } catch (error) {
+          console.error('Error parsing date:', error);
+          return 0;
+        }
+    }
+  });
 
   return (
     <Box sx={{ p: 3 }}>
-      <Toolbar
-        sx={{
-          mb: 2,
-          px: { sm: 3 },
-          gap: 2,
-          display: 'flex',
-          flexWrap: 'wrap',
-        }}
-      >
-        <TextField
-          size="small"
-          placeholder="Search photos..."
-          value={searchQuery}
-          onChange={handleSearchChange}
-          sx={{ flexGrow: 1, minWidth: '200px' }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search />
-              </InputAdornment>
-            ),
-            endAdornment: searchQuery && (
-              <InputAdornment position="end">
-                <IconButton
-                  size="small"
-                  onClick={handleClearSearch}
-                  data-testid="clear-search"
-                >
-                  <Clear />
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-        />
-
-        <FormControl size="small" sx={{ minWidth: 120 }}>
+      <Box sx={{ mb: 3 }}>
+        <QuickSearch onPhotoClick={handlePhotoClick} />
+      </Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4">Photos</Typography>
+        <FormControl sx={{ minWidth: 120 }}>
           <InputLabel id="sort-select-label">Sort by</InputLabel>
           <Select
             labelId="sort-select-label"
             value={sortBy}
             label="Sort by"
-            onChange={handleSortChange}
-            startAdornment={
-              <InputAdornment position="start">
-                <FilterList />
-              </InputAdornment>
-            }
+            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
           >
-            <MenuItem value="date">Date Taken</MenuItem>
-            <MenuItem value="upload">Date Uploaded</MenuItem>
+            <MenuItem value="date_taken">Date Taken</MenuItem>
+            <MenuItem value="upload_date">Upload Date</MenuItem>
             <MenuItem value="title">Title</MenuItem>
-            <MenuItem value="people">Number of People</MenuItem>
+            <MenuItem value="location">Location</MenuItem>
+            <MenuItem value="author">Author</MenuItem>
+            <MenuItem value="tags">Most Tagged</MenuItem>
+            <MenuItem value="people">Most People</MenuItem>
           </Select>
         </FormControl>
-      </Toolbar>
-
-      <Typography variant="h5" gutterBottom>
-        Family Photos
-      </Typography>
-
-      <PhotoGrid
-        photos={photos}
-        loading={loading}
-        error={error}
-        onPhotoClick={handlePhotoClick}
-        onShareClick={handleShareClick}
-        onLikeClick={handleLikeClick}
-      />
-
+      </Box>
+      {sortedPhotos.length > 0 ? (
+        <PhotoGrid photos={sortedPhotos} onPhotoClick={handlePhotoClick} />
+      ) : (
+        <Typography>Aucune photo trouvée</Typography>
+      )}
       {selectedPhoto && (
         <PhotoDetail
           photo={selectedPhoto}
-          open={Boolean(selectedPhoto)}
+          people={[]} // TODO: Load people data
+          open={true}
           onClose={handleCloseDetail}
         />
       )}
     </Box>
   );
 };
+
+export default Photos;

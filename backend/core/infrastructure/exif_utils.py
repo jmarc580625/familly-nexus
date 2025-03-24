@@ -21,6 +21,8 @@ def extract_exif_data(photo_file: BinaryIO) -> Dict[str, Any]:
             - iso: int
     """
     try:
+        # Reset file pointer to beginning before reading
+        photo_file.seek(0)
         img = Image.open(photo_file)
         if not hasattr(img, '_getexif') or not img._getexif():
             return {}
@@ -52,6 +54,9 @@ def extract_exif_data(photo_file: BinaryIO) -> Dict[str, Any]:
         exposure_time = exif.get('ExposureTime')
         iso = exif.get('ISOSpeedRatings')
 
+        # Reset file pointer to beginning after reading
+        photo_file.seek(0)
+
         return {
             'date_taken': date_taken,
             'author': author,
@@ -62,6 +67,12 @@ def extract_exif_data(photo_file: BinaryIO) -> Dict[str, Any]:
             'exposure_time': str(exposure_time) if exposure_time else None,
             'iso': int(iso) if iso else None
         }
-
     except Exception:
+        # If anything goes wrong, return empty dict
         return {}
+    finally:
+        # Always make sure to reset the file pointer
+        try:
+            photo_file.seek(0)
+        except:
+            pass

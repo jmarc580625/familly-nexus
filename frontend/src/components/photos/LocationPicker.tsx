@@ -17,16 +17,18 @@ import 'leaflet/dist/leaflet.css';
 
 // Fix for default marker icon in webpack environment
 const DefaultIcon = new Icon({
-  iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png').default,
-  iconUrl: require('leaflet/dist/images/marker-icon.png').default,
-  shadowUrl: require('leaflet/dist/images/marker-shadow.png').default,
+  iconUrl: '/images/marker-icon.png',
+  iconRetinaUrl: '/images/marker-icon-2x.png',
+  shadowUrl: '/images/marker-shadow.png',
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 });
+
+// Set default icon for all markers
 Icon.Default.mergeOptions({
-  iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png').default,
-  iconUrl: require('leaflet/dist/images/marker-icon.png').default,
-  shadowUrl: require('leaflet/dist/images/marker-shadow.png').default,
+  iconUrl: '/images/marker-icon.png',
+  iconRetinaUrl: '/images/marker-icon-2x.png',
+  shadowUrl: '/images/marker-shadow.png',
 });
 
 interface LocationPickerProps {
@@ -57,8 +59,8 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 }) => {
   const [location, setLocation] = useState<Location>({
     name: initialLocation?.name || '',
-    latitude: initialLocation?.latitude || 51.505,
-    longitude: initialLocation?.longitude || -0.09,
+    latitude: initialLocation?.latitude || 48.8566, // Paris coordinates as default
+    longitude: initialLocation?.longitude || 2.3522,
   });
   const [loading, setLoading] = useState(false);
 
@@ -100,21 +102,23 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     field: 'latitude' | 'longitude',
     value: number
   ) => {
-    const newLocation = {
-      ...location,
-      [field]: value,
-    };
-    setLocation(newLocation);
-    updateLocationName(
-      field === 'latitude' ? value : location.latitude,
-      field === 'longitude' ? value : location.longitude
-    );
+    if (!isNaN(value)) {
+      setLocation((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+      if (field === 'latitude') {
+        updateLocationName(value, location.longitude);
+      } else {
+        updateLocationName(location.latitude, value);
+      }
+    }
   };
 
-  const handleNameChange = (name: string) => {
+  const handleNameChange = (value: string) => {
     setLocation((prev) => ({
       ...prev,
-      name,
+      name: value,
     }));
   };
 
@@ -137,7 +141,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <Marker 
+            <Marker
               position={[location.latitude, location.longitude]}
               icon={DefaultIcon}
             />

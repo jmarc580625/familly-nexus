@@ -9,7 +9,7 @@ def wait_for_minio():
     print("Waiting for MinIO to be ready...")
     s3_client = boto3.client(
         's3',
-        endpoint_url=os.getenv('S3_ENDPOINT', 'http://minio:9000'),
+        endpoint_url=os.getenv('S3_ENDPOINT', 'http://127.0.0.1:9000'),
         aws_access_key_id=os.getenv('S3_ACCESS_KEY', 'minioadmin'),
         aws_secret_access_key=os.getenv('S3_SECRET_KEY', 'minioadmin'),
         region_name=os.getenv('S3_REGION', 'us-east-1'),
@@ -42,7 +42,7 @@ def create_bucket():
     """Create and configure the bucket"""
     s3_client = boto3.client(
         's3',
-        endpoint_url=os.getenv('S3_ENDPOINT', 'http://minio:9000'),
+        endpoint_url=os.getenv('S3_ENDPOINT', 'http://127.0.0.1:9000'),
         aws_access_key_id=os.getenv('S3_ACCESS_KEY', 'minioadmin'),
         aws_secret_access_key=os.getenv('S3_SECRET_KEY', 'minioadmin'),
         region_name=os.getenv('S3_REGION', 'us-east-1'),

@@ -69,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({ user, onToggleSidebar, onLogout 
             >
               <Avatar
                 alt={user.name}
-                src={user.avatarUrl}
+                src={user.avatar_url}
                 sx={{ width: 32, height: 32 }}
               />
             </IconButton>

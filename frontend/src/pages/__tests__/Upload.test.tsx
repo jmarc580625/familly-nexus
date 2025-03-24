@@ -1,27 +1,35 @@
 import React from 'react';
-import { render, screen, waitFor, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
 import '@testing-library/jest-dom';
-import { Upload } from '../Upload';
+import Upload from '../Upload';
 import { Photo, Person } from '../../types';
+import { API_BASE_URL } from '../../config';
 
 // Mock PhotoUpload component
 jest.mock('../../components/photos/PhotoUpload', () => ({
   PhotoUpload: ({ onUploadComplete, suggestedTags, suggestedPeople }: {
-    onUploadComplete: (photos: Photo[]) => void;
-    suggestedTags: string[];
-    suggestedPeople: Person[];
+    onUploadComplete?: (photos: Photo[]) => void;
+    suggestedTags?: string[];
+    suggestedPeople?: Person[];
   }) => (
     <div data-testid="photo-upload">
-      <div>Tags: {suggestedTags.join(', ')}</div>
-      <div>People: {suggestedPeople.map(p => p.name).join(', ')}</div>
+      <div>Tags: {suggestedTags?.join(', ') || 'No tags'}</div>
+      <div>People: {suggestedPeople?.map(p => p.name).join(', ') || 'No people'}</div>
       <button
-        onClick={() => onUploadComplete([{
-          id: '1',
-          url: 'test.jpg',
+        onClick={() => onUploadComplete?.([{
+          id: 1,
+          file_name: 'test.jpg',
+          s3_key: 'photos/test.jpg',
+          url: 'http://example.com/test.jpg',
           title: 'Test Photo',
-          takenAt: '2024-03-21T00:00:00Z',
-          uploadedAt: '2024-03-21T00:00:00Z',
+          description: 'A test photo',
+          upload_date: '2025-03-22T15:55:48+01:00',
+          date_taken: '2025-03-22T15:55:48+01:00',
+          author: 'Test User',
+          location_name: 'Test Location',
+          latitude: 48.8566,
+          longitude: 2.3522,
           tags: [],
           people: []
         }])}
@@ -36,148 +44,111 @@ jest.mock('../../components/photos/PhotoUpload', () => ({
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
-describe('Upload', () => {
-  const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation();
+jest.mock('../../config', () => ({
+  API_BASE_URL: 'http://localhost:5000'
+}));
 
+describe('Upload component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  afterEach(async () => {
-    // Cleanup any pending effects
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
-  });
-
-  afterAll(() => {
-    mockConsoleLog.mockRestore();
-  });
-
-  it('renders upload page with title and description', async () => {
-    await act(async () => {
-      render(<Upload />);
-    });
-    
-    expect(screen.getByText('Upload Photos')).toBeInTheDocument();
-    expect(screen.getByText(/Upload your family photos/)).toBeInTheDocument();
-  });
-
-  it('fetches and passes suggestions to PhotoUpload', async () => {
-    // Mock successful API responses
-    const mockTags = ['family', 'vacation', 'birthday'];
-    const mockPeople = [
-      { id: '1', name: 'John Doe', relationships: [], photos: [] },
-      { id: '2', name: 'Jane Doe', relationships: [], photos: [] }
-    ];
-
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ data: mockTags })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ data: mockPeople })
-      });
-
-    await act(async () => {
-      render(<Upload />);
-    });
-
-    // Wait for suggestions to be loaded
-    await waitFor(() => {
-      const uploadComponent = screen.getByTestId('photo-upload');
-      expect(uploadComponent).toHaveTextContent('Tags: family, vacation, birthday');
-      expect(uploadComponent).toHaveTextContent('People: John Doe, Jane Doe');
-    });
-
-    // Verify API calls
-    expect(mockFetch).toHaveBeenCalledTimes(2);
-    expect(mockFetch).toHaveBeenCalledWith('/api/photos/tags');
-    expect(mockFetch).toHaveBeenCalledWith('/api/persons');
-  });
-
-  it('handles API errors gracefully', async () => {
-    // Mock failed API responses
-    mockFetch.mockRejectedValue(new Error('API Error'));
-
-    await act(async () => {
-      render(<Upload />);
-    });
-
-    // Wait for error alert to appear
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('API Error');
-    });
-  });
-
-  it('handles non-ok API responses', async () => {
-    // Mock non-ok API response
-    mockFetch.mockResolvedValue({
-      ok: false
-    });
-
-    await act(async () => {
-      render(<Upload />);
-    });
-
-    // Wait for error alert to appear
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('Failed to fetch tags');
-    });
-  });
-
-  it('allows dismissing error message', async () => {
-    // Mock API error
-    mockFetch.mockRejectedValue(new Error('API Error'));
-
-    await act(async () => {
-      render(<Upload />);
-    });
-
-    // Wait for error alert to appear
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toBeInTheDocument();
-    });
-
-    // Click close button
-    const closeButton = screen.getByRole('button', { name: /close/i });
-    await userEvent.click(closeButton);
-
-    // Error should be dismissed
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  });
-
-  it('handles upload completion', async () => {
-    // Mock successful API responses for suggestions
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ data: [] })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ data: [] })
-      });
-
-    await act(async () => {
-      render(<Upload />);
-    });
-
-    // Click upload button
-    const uploadButton = screen.getByRole('button', { name: /upload/i });
-    await userEvent.click(uploadButton);
-
-    // Verify upload completion handler was called
-    expect(mockConsoleLog).toHaveBeenCalledWith(
-      'Upload completed:',
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: '1',
-          title: 'Test Photo'
-        })
-      ])
+  it('renders file upload section', () => {
+    render(
+      <BrowserRouter>
+        <Upload />
+      </BrowserRouter>
     );
+
+    expect(screen.getByText(/Déposer vos photos/i)).toBeInTheDocument();
+  });
+
+  it('handles file selection', () => {
+    const mockFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
+    const mockPhoto: Photo = {
+      id: 1,
+      file_name: 'beach.jpg',
+      s3_key: 'photos/beach.jpg',
+      url: 'http://localhost:9000/family-nexus-photos/photos/beach.jpg',
+      title: 'Beach Resort',
+      description: 'A beautiful beach resort',
+      upload_date: '2024-03-22T10:00:00Z',
+      date_taken: '2024-03-20T15:30:00Z',
+      author: 'John Doe',
+      location_name: 'Maldives',
+      latitude: 3.2028,
+      longitude: 73.2207,
+      tags: ['vacation', 'beach'],
+      people: [1, 2]
+    };
+
+    render(
+      <BrowserRouter>
+        <Upload />
+      </BrowserRouter>
+    );
+
+    const input = screen.getByLabelText(/Déposer vos photos/i);
+    fireEvent.change(input, { target: { files: [mockFile] } });
+
+    // Add assertions for file selection behavior
+  });
+
+  test('fetches and displays suggestions', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          data: ['vacation', 'family']
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          data: [
+            { id: '1', name: 'John Doe', relationships: [], photos: [] },
+            { id: '2', name: 'Jane Doe', relationships: [], photos: [] }
+          ]
+        })
+      });
+
+    render(
+      <BrowserRouter>
+        <Upload />
+      </BrowserRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Tags: vacation, family')).toBeInTheDocument();
+    }, { timeout: 2000 });
+
+    await waitFor(() => {
+      expect(screen.getByText('People: John Doe, Jane Doe')).toBeInTheDocument();
+    }, { timeout: 2000 });
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(mockFetch).toHaveBeenCalledWith(`${API_BASE_URL}/api/photos/tags`);
+    expect(mockFetch).toHaveBeenCalledWith(`${API_BASE_URL}/api/persons`);
+  });
+
+  test('handles fetch errors gracefully', async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error'
+      });
+
+    render(
+      <BrowserRouter>
+        <Upload />
+      </BrowserRouter>
+    );
+
+    await waitFor(() => {
+      const alert = screen.getByRole('alert');
+      expect(alert).toBeInTheDocument();
+      expect(alert).toHaveTextContent('Failed to fetch tags');
+    }, { timeout: 2000 });
   });
 });

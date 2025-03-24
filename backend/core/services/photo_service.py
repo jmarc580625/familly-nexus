@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Dict, Any, List, BinaryIO
 from werkzeug.utils import secure_filename
+from sqlalchemy import or_
 from core.services.service_context import ServiceContext
 from core.services.storage_service import StorageService
 from core.models.photo import Photo
@@ -69,7 +70,7 @@ class PhotoService:
                     people.append(person)
 
             # Create photo record
-            location = metadata.get('location', {})
+            location = metadata.get('location') or {}
             current_time = datetime.now(timezone.utc)
             new_photo = Photo(
                 file_name=filename,
@@ -104,21 +105,38 @@ class PhotoService:
 
     def get_photos(self, search_criteria: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        Get photos based on search criteria.
+        Get photos based on structured search criteria.
+        
+        This method is optimized for filtering photos using exact criteria such as date ranges,
+        specific tags, or people. It performs exact matches and is ideal for filtering through
+        UI components like date pickers, tag selectors, etc.
         
         Args:
             search_criteria: Dictionary containing:
-                - tags: List[str]
-                - people: List[int] (person IDs)
-                - start_date: datetime
-                - end_date: datetime
-                - location: str
+                - tags: List[str] - Tag names to filter by (AND condition - must have ALL tags)
+                - people: List[int] - Person IDs to filter by
+                - start_date: datetime - Filter photos taken after this date
+                - end_date: datetime - Filter photos taken before this date
+                - location: str - Exact location name to filter by
+        
+        Returns:
+            List of photo dictionaries matching all the provided criteria
+        
+        Example:
+            >>> criteria = {
+            ...     'tags': ['family', 'vacation'],  # Photos must have BOTH 'family' AND 'vacation' tags
+            ...     'start_date': datetime(2024, 1, 1),
+            ...     'end_date': datetime(2024, 12, 31)
+            ... }
+            >>> photos = photo_service.get_photos(criteria)
         """
         try:
             query = self.db.session.query(Photo)
 
-            if 'tags' in search_criteria:
-                query = query.filter(Photo.tags.any(Tag.name.in_(search_criteria['tags'])))
+            if 'tags' in search_criteria and search_criteria['tags']:
+                # Use AND condition for tags - photo must have ALL specified tags
+                for tag_name in search_criteria['tags']:
+                    query = query.filter(Photo.tags.any(Tag.name == tag_name))
 
             if 'people' in search_criteria:
                 query = query.filter(Photo.people.any(Person.id.in_(search_criteria['people'])))
@@ -194,3 +212,71 @@ class PhotoService:
             return [tag.name for tag in tags]
         except Exception as e:
             raise Exception(f"Failed to get tags: {str(e)}")
+
+    def search_photos(self, query: str) -> List[Dict[str, Any]]:
+        """
+        Search photos using free-text search across multiple fields.
+        
+        This method performs a fuzzy text search across various photo fields including
+        title, description, tags, location, and associated people's names. It's ideal
+        for search bar functionality where users can enter any keywords.
+        
+        The search is:
+        - Case-insensitive
+        - Matches partial words
+        - Searches across multiple fields
+        - Supports multiple search terms (space-separated)
+        
+        Fields searched:
+        - Photo title
+        - Photo description
+        - Location name
+        - Tag names
+        - Associated people's names
+        
+        Args:
+            query: str - Space-separated search terms
+                       Example: "Paris vacation 2024"
+        
+        Returns:
+            List of photo dictionaries matching any of the search terms,
+            ordered by date taken (most recent first), limited to 50 results
+        
+        Example:
+            >>> photos = photo_service.search_photos("Paris summer")
+            # Will find photos with "Paris" or "summer" in any of the searchable fields
+        """
+        if not query:
+            return []
+
+        # Split query into terms for better matching
+        terms = [term.strip() for term in query.split() if term.strip()]
+        
+        # Start with the base query from get_photos
+        search_criteria = {}
+        base_query = self.db.session.query(Photo).distinct()
+
+        # Add text search conditions
+        text_conditions = []
+        for term in terms:
+            term_pattern = f"%{term}%"
+            text_conditions.append(
+                or_(
+                    Photo.title.ilike(term_pattern),
+                    Photo.description.ilike(term_pattern),
+                    Photo.location_name.ilike(term_pattern),
+                    Photo.tags.any(Tag.name.ilike(term_pattern)),
+                    Photo.people.any(or_(
+                        Person.first_name.ilike(term_pattern),
+                        Person.last_name.ilike(term_pattern)
+                    ))
+                )
+            )
+        
+        if text_conditions:
+            base_query = base_query.filter(or_(*text_conditions))
+
+        # Get photos with text search applied
+        photos = base_query.order_by(Photo.date_taken.desc()).limit(50)
+        
+        return [photo.to_dict() for photo in photos.all()]

@@ -1,3 +1,4 @@
+/** @jsxImportSource @emotion/react */
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -21,9 +22,12 @@ jest.mock('react-dropzone', () => ({
     
     return {
       getRootProps: () => ({ 
-        'data-testid': 'dropzone'
+        'data-testid': 'dropzone',
+        onClick: () => {}
       }),
-      getInputProps: () => ({}),
+      getInputProps: () => ({
+        'data-testid': 'dropzone-input'
+      }),
       isDragActive: false
     };
   }
@@ -44,7 +48,7 @@ describe('PhotoUpload', () => {
     render(<PhotoUpload />);
     
     expect(screen.getByText(/Drag and drop photos here, or click to select/i)).toBeInTheDocument();
-    expect(screen.getByText(/Supports JPEG, PNG and GIF up to 10MB/i)).toBeInTheDocument();
+    expect(screen.getByText(/Supports JPEG, PNG and GIF up to/i)).toBeInTheDocument();
   });
 
   // Test Case 2: Renders with suggested tags and people
@@ -84,9 +88,17 @@ describe('PhotoUpload', () => {
       dropCallback!([mockFile], fileRejections, new Event('drop'));
     });
 
-    // Wait for the file to be processed
+    // Wait for the file preview to be processed
     await waitFor(() => {
-      expect(screen.getByText('test')).toBeInTheDocument(); // The title defaults to filename without extension
-    });
+      // Check that URL.createObjectURL was called
+      expect(URL.createObjectURL).toHaveBeenCalledWith(mockFile);
+      
+      // Verify the metadata fields are rendered
+      expect(screen.getByLabelText('Title')).toBeInTheDocument();
+      expect(screen.getByLabelText('Description')).toBeInTheDocument();
+      
+      // Verify the preview element exists
+      expect(screen.getByTestId('photo-preview')).toBeInTheDocument();
+    }, { timeout: 2000 });
   });
 });

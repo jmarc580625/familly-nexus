@@ -8,6 +8,7 @@ authors = [
 license = "MIT"
 readme = "README.md"
 requires-python = "^3.13"
+packages = [{ include = "backend" }]
 
 [tool.poetry.dependencies]
 Flask = "^3.1.0"
@@ -38,6 +39,9 @@ addopts = "-v"
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+dev = "backend.scripts.dev:main"
 
 [tool.poetry]
 packages = [{ include = "backend" }]

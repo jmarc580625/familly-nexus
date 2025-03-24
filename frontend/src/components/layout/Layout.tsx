@@ -6,13 +6,13 @@ import { User } from '../../types';
 
 interface LayoutProps {
   children: React.ReactNode;
-  user?: User;
+  user: User;
   onLogout: () => void;
 }
 
 const DRAWER_WIDTH = 240;
 
-export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
+const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const handleToggleSidebar = () => {
@@ -48,3 +48,5 @@ export const Layout: React.FC<LayoutProps> = ({ children, user, onLogout }) => {
     </Box>
   );
 };
+
+export default Layout;
